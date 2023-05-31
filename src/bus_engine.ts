@@ -2,20 +2,7 @@ import {Client, StompConfig} from "@stomp/stompjs";
 import {RanchUtils} from "./utils.ts";
 import {Bus, BusCallback, Channel, Subscriber, Subscription} from "./bus.ts";
 
-let _busSingleton: Bus
-
-export function CreateBus(): Bus {
-    if (!_busSingleton) {
-        _busSingleton = new ranch()
-    }
-    return _busSingleton
-}
-
-export function GetBus(): Bus {
-    return CreateBus()
-}
-
-class ranch implements Bus {
+export class ranch implements Bus {
     private _channels: Channel[] = []
     private _stompClient: Client | undefined  = undefined;
     private _preMappedChannels: Map<string, string>

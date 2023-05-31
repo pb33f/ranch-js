@@ -1,4 +1,5 @@
 import {Client, StompConfig} from "@stomp/stompjs";
+import {ranch} from "./bus_engine.ts";
 
 /**
  * A callback for a message received on a channel
@@ -55,5 +56,17 @@ export interface Bus {
 export interface CommandResponse<T = any> {
     channel: string;
     payload: T;
+}
+
+let _busSingleton: Bus
+export function CreateBus(): Bus {
+    if (!_busSingleton) {
+        _busSingleton = new ranch()
+    }
+    return _busSingleton
+}
+
+export function GetBus(): Bus {
+    return CreateBus()
 }
 
