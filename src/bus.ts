@@ -1,13 +1,33 @@
 import {Client, StompConfig} from "@stomp/stompjs";
 
+/**
+ * A callback for a message received on a channel
+ */
 export type BusCallback<T = any> = (message: Message<T>) => void
 
+/**
+ * A subscription to a channel
+ */
 export interface Subscription {
+    /**
+     * unsubscribe will remove the subscription from the channel
+     */
     unsubscribe(): void
 }
 
+/**
+ * A subscriber to a channel
+ */
 export interface Subscriber {
+
+    /**
+     * name of the subscriber
+     */
     name: string
+
+    /**
+     * callback to be called when a message is received
+     */
     callback: BusCallback
 }
 
