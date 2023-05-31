@@ -12,7 +12,7 @@ Designed to be used with [ranch](https://github.com/pb33f/ranch).
 
 ---
 
-ranch.js and [saddlebag](https://github.com/pb33f/saddlebag) and [ranch](https://github.com/pb33f/ranch) are re-imagined, 
+ranch.js and [saddlebag](https://github.com/pb33f/saddlebag-js) and [ranch](https://github.com/pb33f/ranch) are re-imagined, 
 simplified and modernized versions of [transport](https://transport-bus.io).
 
 All the power, none of the complexity.
