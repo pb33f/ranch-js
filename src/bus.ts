@@ -1,4 +1,4 @@
-import {Client, StompConfig} from "@stomp/stompjs";
+import {Client, IPublishParams, StompConfig} from "@stomp/stompjs";
 import {ranch} from "./bus_engine.ts";
 
 /**
@@ -51,6 +51,7 @@ export interface Bus {
     connectToBroker(config: StompConfig): void;
     mapChannelToBrokerDestination(destination: string, channel: string): void
     getClient(): Client | undefined
+    publish(params: IPublishParams): void
 }
 
 export interface CommandResponse<T = any> {
