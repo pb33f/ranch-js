@@ -1,4 +1,4 @@
-import {Client, StompConfig} from "@stomp/stompjs";
+import {Client, IPublishParams, StompConfig} from "@stomp/stompjs";
 import {RanchUtils} from "./utils.ts";
 import {Bus, BusCallback, Channel, Subscriber, Subscription} from "./bus.ts";
 
@@ -60,6 +60,12 @@ export class ranch implements Bus {
             this._preMappedChannels.set(destination, channel)
         } else {
             this._mapDestination(destination, channel)
+        }
+    }
+
+    publish(params: IPublishParams): void {
+        if (this._stompClient) {
+            this._stompClient.publish(params)
         }
     }
 }
