@@ -10,4 +10,13 @@ export class RanchUtils {
         }
         return uuid;
     }
+
+    public static genShortId(length: number): string {
+        function randomString(length: number, chars: string) {
+            var result = '';
+            for (var i = length; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
+            return result;
+        }
+        return randomString(length, '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
+    }
 }
