@@ -5,18 +5,11 @@
   "private": false,
   "description": "A tiny event bus to connect to the ranch",
   "type": "module",
-  "main": "./dist/ranch.umd.cjs",
-  "module": "./dist/ranch.js",
+  "main": "./dist/ranch.js",
   "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/ranch.js",
-      "require": "./dist/ranch.umd.cjs"
-    }
-  },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && tsc",
+    "build": "vite build",
     "preview": "vite preview",
     "test": "vitest",
     "coverage": "vitest run --coverage"
@@ -27,13 +20,14 @@
     "c8": "^7.13.0",
     "i": "^0.3.7",
     "typescript": "^5.0.2",
-    "vite": "^4.3.2",
+    "vite": "5.4.6",
     "vitest": "^0.31.1"
   },
   "files": [
     "dist"
   ],
   "dependencies": {
-    "@stomp/stompjs": "^7.0.0"
+    "@stomp/stompjs": "^7.0.0",
+    "vite-plugin-dts": "^4.3.0"
   }
 }
