@@ -1,2 +1,2 @@
-export * from './bus.ts';
-export * from './utils.ts';
+export * from './bus';
+export * from './utils';
