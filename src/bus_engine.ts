@@ -43,6 +43,19 @@ export class ranch implements Bus {
                 config.onConnect(frame);
             }
         }
+        this._stompClient.onDisconnect = (frame) => {
+            console.warn('Disconnected from the ranch')
+            if (config.onDisconnect) {
+                config.onDisconnect(frame);
+            }
+        }
+        this._stompClient.onWebSocketClose = ((frame: any) => {
+            console.warn('Socket connection to the ranch was closed, reconnecting...')
+            if (config.onDisconnect) {
+                config.onDisconnect(frame);
+            }
+        })
+        this._stompClient.activate()
     }
 
     private _mapDestination(destination: string, channel: string) {
