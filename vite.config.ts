@@ -7,7 +7,7 @@ export default defineConfig({
     build: {
         minify: true,
         lib: {
-            entry: resolve(__dirname, 'src/index.ts'),
+            entry: resolve(__dirname, 'src/ranch.ts'),
             name: 'ranch',
             fileName: 'ranch',
             formats: ['es'],
@@ -16,12 +16,17 @@ export default defineConfig({
         rollupOptions: {
             output: {
                 globals: {
-                    "@stomp/stompjs": "@stomp/stompjs"},
+                    "@stomp/stompjs": "@stomp/stompjs",
+                },
             },
             external: [
                 "@stomp/stompjs",
             ],
-        }
+        },
     },
-    plugins: [dts()]
+    plugins: [
+        dts({
+            //rollupTypes: true, // This bundles the declarations into a file named ranch.d.ts in dist/
+        }),
+    ],
 });

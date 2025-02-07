@@ -6,7 +6,13 @@
   "description": "A tiny event bus to connect to the ranch",
   "type": "module",
   "main": "./dist/ranch.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/ranch.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/ranch.js",
+      "types": "./dist/ranch.d.ts"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

@@ -1,11 +1,12 @@
-import {Client, IPublishParams, StompConfig} from "@stomp/stompjs";
-import {RanchUtils} from "./utils.ts";
-import {Bus, BusCallback, Channel, Subscriber, Subscription} from "./bus.ts";
+import {Client, IPublishParams} from "@stomp/stompjs";
+import {RanchUtils} from "./utils.js";
+import {Bus, BusCallback, Channel, RanchConfig, Subscriber, Subscription} from "./bus.js";
 
 export class ranch implements Bus {
     private _channels: Channel[] = []
-    private _stompClient: Client | undefined  = undefined;
+    private _stompClient: Client | undefined = undefined;
     private _preMappedChannels: Map<string, string>
+
     constructor() {
         this._preMappedChannels = new Map<string, string>()
     }
@@ -17,6 +18,7 @@ export class ranch implements Bus {
     get channels(): Channel[] {
         return this._channels
     }
+
     createChannel(channelName: string): Channel {
         const chan = new channel(channelName)
         this._channels.push(chan)
@@ -32,13 +34,13 @@ export class ranch implements Bus {
         }
     }
 
-    connectToBroker(config: StompConfig) {
+    connectToBroker(config: RanchConfig) {
         this._stompClient = new Client(config)
         this._stompClient.activate()
         this._stompClient.onConnect = (frame) => {
-            this._preMappedChannels.forEach((channel: string, destination: string) => {
-                this._mapDestination(destination, channel)
-            });
+            if (config.mapChannelsOnConnect) {
+                this.mapChannels();
+            }
             if (config.onConnect) {
                 config.onConnect(frame);
             }
@@ -58,16 +60,13 @@ export class ranch implements Bus {
         this._stompClient.activate()
     }
 
-    private _mapDestination(destination: string, channel: string) {
-        if (this._stompClient) {
-            this._stompClient.subscribe(destination, message => {
-                const chan = this._channels.find(c => c.name === channel)
-                if (chan) {
-                    chan.publish({payload: JSON.parse(message.body)})
-                }
-            });
-        }
+    mapChannels() {
+        this._preMappedChannels.forEach((channel: string, destination: string) => {
+            this._mapDestination(destination, channel)
+        });
+        this._preMappedChannels.clear()
     }
+
     mapChannelToBrokerDestination(destination: string, channel: string) {
         if (!this._stompClient || !this._stompClient.connected) {
             this._preMappedChannels.set(destination, channel)
@@ -81,17 +80,31 @@ export class ranch implements Bus {
             this._stompClient.publish(params)
         }
     }
+
+    private _mapDestination(destination: string, channel: string) {
+        if (this._stompClient) {
+            this._stompClient.subscribe(destination, message => {
+                const chan = this._channels.find(c => c.name === channel)
+                if (chan) {
+                    chan.publish({payload: JSON.parse(message.body)})
+                }
+            });
+        }
+    }
 }
 
 class channel implements Channel {
     private subscribers: Subscriber[] = []
     private readonly _name: string
+
     constructor(channelName: string) {
         this._name = channelName
     }
+
     get name(): string {
         return this._name
     }
+
     subscribe(callback: BusCallback): Subscription {
         const subscriber: Subscriber = {
             name: RanchUtils.genUUID(),
@@ -105,6 +118,7 @@ class channel implements Channel {
             }
         }
     }
+
     publish(message: any): void {
         this.subscribers.forEach((s: Subscriber) => s.callback(message))
     }
