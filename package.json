@@ -16,24 +16,18 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "test": "vitest",
-    "coverage": "vitest run --coverage"
+    "preview": "vite preview"
   },
   "devDependencies": {
-    "@vitest/coverage-c8": "^0.31.1",
-    "@vitest/ui": "^0.31.1",
-    "c8": "^7.13.0",
     "i": "^0.3.7",
-    "typescript": "^5.0.2",
-    "vite": "5.4.6",
-    "vitest": "^0.31.1"
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3",
+    "vite-plugin-dts": "^4.5.4"
   },
   "files": [
     "dist"
   ],
   "dependencies": {
-    "@stomp/stompjs": "^7.0.0",
-    "vite-plugin-dts": "^4.3.0"
+    "@stomp/stompjs": "^7.1.1"
   }
 }

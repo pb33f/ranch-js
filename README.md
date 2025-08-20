@@ -19,4 +19,6 @@ All the power, none of the complexity.
 
 ---
 
-This is very much under construction, and should not be used by anyone, anywhere, for anything. If you do, you're on your own.
+This is very much under construction, and should **not be used by anyone, anywhere, for anything**. If you do, you're on your own.
+
+It's custom designed for pb33f and our needs for now.

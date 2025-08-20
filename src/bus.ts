@@ -1,10 +1,31 @@
-import {Client, IPublishParams, StompConfig} from "@stomp/stompjs";
+import {Client, IPublishParams, StompConfig, IFrame} from "@stomp/stompjs";
 import {ranch} from "./bus_engine.js";
 
 /**
  * A callback for a message received on a channel
  */
 export type BusCallback<T = any> = (message: Message<T>) => void
+
+/**
+ * A callback for STOMP error frames
+ */
+export type StompErrorCallback = (error: StompError) => void
+
+/**
+ * Error information extracted from STOMP ERROR frames
+ */
+export interface StompError {
+    /** The raw STOMP error frame */
+    frame: IFrame
+    /** Error message from frame body or headers */
+    message: string
+    /** Additional error details from headers */
+    details?: string
+    /** Error code if available */
+    code?: string
+    /** Timestamp when error occurred */
+    timestamp: Date
+}
 
 /**
  * A subscription to a channel
@@ -63,6 +84,12 @@ export interface Channel {
 
 export class RanchConfig extends StompConfig {
     public mapChannelsOnConnect?: boolean = true;
+    
+    /**
+     * Enhanced callback invoked when STOMP ERROR frames are received
+     * This provides structured error information beyond the basic frame
+     */
+    public onRanchStompError?: StompErrorCallback;
 }
 
 /**
