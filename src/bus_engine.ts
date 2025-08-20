@@ -1,14 +1,46 @@
-import {Client, IPublishParams} from "@stomp/stompjs";
+import {Client, IPublishParams, IFrame} from "@stomp/stompjs";
 import {RanchUtils} from "./utils.js";
-import {Bus, BusCallback, Channel, RanchConfig, Subscriber, Subscription} from "./bus.js";
+import {Bus, BusCallback, Channel, RanchConfig, StompError, Subscriber, Subscription} from "./bus.js";
+
+const ERROR_CHANNEL_NAME = 'errors';
+const DEFAULT_ERROR_MESSAGE = 'An error occurred while communicating with the server';
 
 export class ranch implements Bus {
     private _channels: Channel[] = []
     private _stompClient: Client | undefined = undefined;
     private _preMappedChannels: Map<string, string>
+    private _activeMappings: Map<string, string>
 
     constructor() {
         this._preMappedChannels = new Map<string, string>()
+        this._activeMappings = new Map<string, string>()
+    }
+
+    /**
+     * Extracts error information from a STOMP ERROR frame
+     * @param frame The STOMP ERROR frame received from the server
+     * @returns Structured error information
+     */
+    private _extractStompError(frame: IFrame): StompError {
+        // Extract message from frame body or headers
+        let message = DEFAULT_ERROR_MESSAGE;
+        
+        // Check frame body first
+        if (frame.body && frame.body.trim()) {
+            message = frame.body.trim();
+        } 
+        // Fallback to 'message' header
+        else if (frame.headers && frame.headers['message']) {
+            message = frame.headers['message'];
+        }
+        
+        return {
+            frame,
+            message,
+            details: frame.headers?.['details'],
+            code: frame.headers?.['code'] || frame.headers?.['error-code'],
+            timestamp: new Date()
+        };
     }
 
     getClient(): Client | undefined {
@@ -57,10 +89,42 @@ export class ranch implements Bus {
                 config.onDisconnect(frame);
             }
         })
+        
+        // Configure STOMP ERROR frame handler
+        this._stompClient.onStompError = (frame: IFrame) => {
+            const stompError = this._extractStompError(frame);
+            
+            // Log error to console
+            console.error('STOMP Error received:', stompError.message, stompError);
+            
+            // Publish to error channel for centralized error handling
+            const errorChannel = this.getChannel(ERROR_CHANNEL_NAME);
+            errorChannel.publish({
+                command: 'STOMP_ERROR',
+                payload: stompError
+            });
+            
+            // Call user-defined enhanced error callback if provided
+            if (config.onRanchStompError) {
+                config.onRanchStompError(stompError);
+            }
+            
+            // Also call base STOMP error handler if provided
+            if (config.onStompError) {
+                config.onStompError(frame);
+            }
+        }
+        
         this._stompClient.activate()
     }
 
     mapChannels() {
+        // Re-map existing active destinations (lost on reconnection)
+        this._activeMappings.forEach((channel: string, destination: string) => {
+            this._mapDestination(destination, channel, false)
+        });
+        
+        // Map queued destinations
         this._preMappedChannels.forEach((channel: string, destination: string) => {
             this._mapDestination(destination, channel)
         });
@@ -81,7 +145,7 @@ export class ranch implements Bus {
         }
     }
 
-    private _mapDestination(destination: string, channel: string) {
+    private _mapDestination(destination: string, channel: string, persistMapping: boolean = true) {
         if (this._stompClient) {
             this._stompClient.subscribe(destination, message => {
                 const chan = this._channels.find(c => c.name === channel)
@@ -89,6 +153,11 @@ export class ranch implements Bus {
                     chan.publish({payload: JSON.parse(message.body)})
                 }
             });
+            
+            // Track successful mapping for reconnection
+            if (persistMapping) {
+                this._activeMappings.set(destination, channel)
+            }
         }
     }
 }
