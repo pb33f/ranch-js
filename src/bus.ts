@@ -145,6 +145,11 @@ export interface Bus {
      * Manually map channels, if turned off in RanchConfig.
      */
     mapChannels(): void;
+
+    /**
+     * Disable automatic reconnection attempts.
+     */
+    disableReconnection(): void;
 }
 
 export interface CommandResponse<T = any> {

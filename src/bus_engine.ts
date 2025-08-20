@@ -97,6 +97,9 @@ export class ranch implements Bus {
             // Log error to console
             console.error('STOMP Error received:', stompError.message, stompError);
             
+            // Disable reconnection for STOMP errors (typically server-side blocks)
+            this.disableReconnection();
+            
             // Publish to error channel for centralized error handling
             const errorChannel = this.getChannel(ERROR_CHANNEL_NAME);
             errorChannel.publish({
@@ -142,6 +145,13 @@ export class ranch implements Bus {
     publish(params: IPublishParams): void {
         if (this._stompClient) {
             this._stompClient.publish(params)
+        }
+    }
+
+    disableReconnection(): void {
+        if (this._stompClient) {
+            this._stompClient.reconnectDelay = 0;
+            this._stompClient.maxReconnectDelay = 0;
         }
     }
 
