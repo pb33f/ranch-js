@@ -10,10 +10,12 @@ export class ranch implements Bus {
     private _stompClient: Client | undefined = undefined;
     private _preMappedChannels: Map<string, string>
     private _activeMappings: Map<string, string>
+    private _brokerSubscriptions: Map<string, { unsubscribe(): void }>
 
     constructor() {
         this._preMappedChannels = new Map<string, string>()
         this._activeMappings = new Map<string, string>()
+        this._brokerSubscriptions = new Map<string, { unsubscribe(): void }>()
     }
 
     /**
@@ -67,57 +69,65 @@ export class ranch implements Bus {
     }
 
     connectToBroker(config: RanchConfig) {
-        this._stompClient = new Client(config)
-        this._stompClient.activate()
-        this._stompClient.onConnect = (frame) => {
-            if (config.mapChannelsOnConnect) {
-                this.mapChannels();
-            }
-            if (config.onConnect) {
-                config.onConnect(frame);
-            }
+        if (this._stompClient?.active) {
+            return
         }
-        this._stompClient.onDisconnect = (frame) => {
-            console.warn('Disconnected from the ranch')
-            if (config.onDisconnect) {
-                config.onDisconnect(frame);
-            }
-        }
-        this._stompClient.onWebSocketClose = ((frame: any) => {
-            console.warn('Socket connection to the ranch was closed, reconnecting...')
-            if (config.onDisconnect) {
-                config.onDisconnect(frame);
+
+        const onConnect = config.onConnect;
+        const onDisconnect = config.onDisconnect;
+        const onWebSocketClose = config.onWebSocketClose;
+        const onStompError = config.onStompError;
+
+        this._stompClient = new Client({
+            ...config,
+            onConnect: (frame) => {
+                if (config.mapChannelsOnConnect !== false) {
+                    this.mapChannels();
+                }
+                if (onConnect) {
+                    onConnect(frame);
+                }
+            },
+            onDisconnect: (frame) => {
+                console.warn('Disconnected from the ranch')
+                if (onDisconnect) {
+                    onDisconnect(frame);
+                }
+            },
+            onWebSocketClose: (frame: any) => {
+                this._brokerSubscriptions.clear()
+                console.warn('Socket connection to the ranch was closed, reconnecting...')
+                if (onWebSocketClose) {
+                    onWebSocketClose(frame);
+                } else if (onDisconnect) {
+                    onDisconnect(frame);
+                }
+            },
+            onStompError: (frame: IFrame) => {
+                const stompError = this._extractStompError(frame);
+
+                // Log error to console
+                console.error('STOMP Error received:', stompError.message, stompError);
+                this.disableReconnection();
+
+                // Publish to error channel for centralized error handling
+                const errorChannel = this.getChannel(ERROR_CHANNEL_NAME);
+                errorChannel.publish({
+                    command: 'STOMP_ERROR',
+                    payload: stompError
+                });
+
+                // Call user-defined enhanced error callback if provided
+                if (config.onRanchStompError) {
+                    config.onRanchStompError(stompError);
+                }
+
+                // Also call base STOMP error handler if provided
+                if (onStompError) {
+                    onStompError(frame);
+                }
             }
         })
-        
-        // Configure STOMP ERROR frame handler
-        this._stompClient.onStompError = (frame: IFrame) => {
-            const stompError = this._extractStompError(frame);
-            
-            // Log error to console
-            console.error('STOMP Error received:', stompError.message, stompError);
-            
-            // Disable reconnection for STOMP errors (typically server-side blocks)
-            this.disableReconnection();
-            
-            // Publish to error channel for centralized error handling
-            const errorChannel = this.getChannel(ERROR_CHANNEL_NAME);
-            errorChannel.publish({
-                command: 'STOMP_ERROR',
-                payload: stompError
-            });
-            
-            // Call user-defined enhanced error callback if provided
-            if (config.onRanchStompError) {
-                config.onRanchStompError(stompError);
-            }
-            
-            // Also call base STOMP error handler if provided
-            if (config.onStompError) {
-                config.onStompError(frame);
-            }
-        }
-        
         this._stompClient.activate()
     }
 
@@ -150,19 +160,21 @@ export class ranch implements Bus {
 
     disableReconnection(): void {
         if (this._stompClient) {
-            this._stompClient.reconnectDelay = 0;
-            this._stompClient.maxReconnectDelay = 0;
+            this._stompClient.reconnectDelay = 0
+            this._stompClient.maxReconnectDelay = 0
         }
     }
 
     private _mapDestination(destination: string, channel: string, persistMapping: boolean = true) {
-        if (this._stompClient) {
-            this._stompClient.subscribe(destination, message => {
+        if (this._stompClient?.connected) {
+            this._brokerSubscriptions.get(destination)?.unsubscribe()
+            const subscription = this._stompClient.subscribe(destination, message => {
                 const chan = this._channels.find(c => c.name === channel)
                 if (chan) {
                     chan.publish({payload: JSON.parse(message.body)})
                 }
             });
+            this._brokerSubscriptions.set(destination, subscription)
             
             // Track successful mapping for reconnection
             if (persistMapping) {
